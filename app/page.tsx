@@ -42,7 +42,7 @@ export default function HomePage() {
       let query = supabase
         .from("alerts")
         .select("*")
-        .eq("status", "verified")
+        .in("status", ["verified", "pending"]) // Show both verified and pending alerts
         .order("created_at", { ascending: false })
 
       if (selectedCategories.length > 0) {

@@ -1,5 +1,5 @@
 {
-  "name": "Nagar Alert Hub",
+  "name": "Nagar Alerts",
   "short_name": "NagarAlert",
   "description": "Real-time community disruption alerts for road blocks, water outages, and local events",
   "start_url": "/",

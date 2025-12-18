@@ -5,10 +5,9 @@ import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "Nagar Alert Hub - Real-time Community Disruption Alerts",
+  title: "Nagar Alerts - Real-time Community Disruption Alerts",
   description:
     "Stay informed about local disruptions, road blocks, water outages, and community events in real-time. Report and verify alerts to help your community.",
-  generator: "v0.app",
   icons: {
     icon: [
       {
@@ -40,7 +39,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#3b82f6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Nagar Alert Hub" />
+        <meta name="apple-mobile-web-app-title" content="Nagar Alerts" />
         <link rel="apple-touch-icon" href="/apple-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />

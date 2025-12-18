@@ -17,6 +17,7 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const [locationTimeout, setLocationTimeout] = useState<NodeJS.Timeout | null>(null)
 
   // Update parent component when location changes
   useEffect(() => {
@@ -79,11 +80,28 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
       return
     }
 
+    // Check if running on HTTPS or localhost (required for geolocation)
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      alert("Location access requires a secure connection (HTTPS). Please access the site over HTTPS or run locally on localhost. You can still enter coordinates manually.")
+      return
+    }
+
     setIsLoading(true)
+
+    // Set a manual timeout to cancel the request after 10 seconds
+    const timeoutId = setTimeout(() => {
+      setIsLoading(false)
+      alert("Location request is taking too long. This might happen if GPS signal is weak or unavailable. Please try again outdoors or enter coordinates manually.")
+    }, 10000)
+    setLocationTimeout(timeoutId)
 
     // First, check if we have permission
     navigator.permissions.query({ name: 'geolocation' }).then((result) => {
       if (result.state === 'denied') {
+        if (locationTimeout) {
+          clearTimeout(locationTimeout)
+          setLocationTimeout(null)
+        }
         alert("Location access is blocked. Please enable location permissions in your browser settings and try again, or enter coordinates manually.")
         setIsLoading(false)
         return
@@ -92,6 +110,11 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
       // Try to get location with extended timeout
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          if (locationTimeout) {
+            clearTimeout(locationTimeout)
+            setLocationTimeout(null)
+          }
+
           const lat = position.coords.latitude
           const lng = position.coords.longitude
           setLocation({ lat, lng })
@@ -109,22 +132,49 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
 
             if (response.ok) {
               const data = await response.json()
+              console.log('Reverse geocoding response:', data) // Debug log
+
               if (data && data.display_name) {
-                setAddress(data.display_name)
+                // Extract area information for better accuracy display
+                const address = data.address || {}
+                const areaParts = [
+                  address.neighbourhood,
+                  address.suburb,
+                  address.city_district,
+                  address.city,
+                  address.town,
+                  address.village,
+                  address.county,
+                  address.state,
+                  address.country
+                ].filter(Boolean)
+
+                console.log('Area parts:', areaParts) // Debug log
+
+                const areaName = areaParts.length > 0 ? areaParts.slice(0, 2).join(', ') : data.display_name.split(',')[0] || 'Unknown Area'
+                const fullAddress = `${areaName} (${lat.toFixed(6)}, ${lng.toFixed(6)})`
+
+                setAddress(fullAddress)
               } else {
-                setAddress(`Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                setAddress(`Current Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
               }
             } else {
-              setAddress(`Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+              console.warn('Reverse geocoding failed with status:', response.status)
+              setAddress(`Current Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
             }
           } catch (error) {
             console.warn('Reverse geocoding failed:', error)
-            setAddress(`Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+            setAddress(`Current Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
           }
 
           setIsLoading(false)
         },
         (error) => {
+          if (locationTimeout) {
+            clearTimeout(locationTimeout)
+            setLocationTimeout(null)
+          }
+
           console.warn("Geolocation error:", error.code, error.message)
           setIsLoading(false)
 
@@ -150,8 +200,8 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
           alert(`${errorMessage}\n\n${suggestions}`)
         },
         {
-          enableHighAccuracy: true,
-          timeout: 15000, // Increased timeout to 15 seconds
+          enableHighAccuracy: false, // Changed to false for faster response
+          timeout: 30000, // Increased timeout to 30 seconds
           maximumAge: 300000, // 5 minutes
         }
       )
@@ -176,17 +226,39 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
 
             if (response.ok) {
               const data = await response.json()
+              console.log('Reverse geocoding response (fallback):', data) // Debug log
+
               if (data && data.display_name) {
-                setAddress(data.display_name)
+                // Extract area information for better accuracy display
+                const address = data.address || {}
+                const areaParts = [
+                  address.neighbourhood,
+                  address.suburb,
+                  address.city_district,
+                  address.city,
+                  address.town,
+                  address.village,
+                  address.county,
+                  address.state,
+                  address.country
+                ].filter(Boolean)
+
+                console.log('Area parts (fallback):', areaParts) // Debug log
+
+                const areaName = areaParts.length > 0 ? areaParts.slice(0, 2).join(', ') : data.display_name.split(',')[0] || 'Unknown Area'
+                const fullAddress = `${areaName} (${lat.toFixed(6)}, ${lng.toFixed(6)})`
+
+                setAddress(fullAddress)
               } else {
-                setAddress(`Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+                setAddress(`Current Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
               }
             } else {
-              setAddress(`Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+              console.warn('Reverse geocoding failed with status (fallback):', response.status)
+              setAddress(`Current Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
             }
           } catch (error) {
             console.warn('Reverse geocoding failed:', error)
-            setAddress(`Current Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+            setAddress(`Current Location: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
           }
 
           setIsLoading(false)
@@ -216,8 +288,8 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
           alert(`${errorMessage}\n\n${suggestions}`)
         },
         {
-          enableHighAccuracy: true,
-          timeout: 15000, // Increased timeout to 15 seconds
+          enableHighAccuracy: false, // Changed to false for faster response
+          timeout: 30000, // Increased timeout to 30 seconds
           maximumAge: 300000, // 5 minutes
         }
       )
@@ -258,6 +330,11 @@ export function LocationPicker({ onLocationSelect, initialLocation }: LocationPi
           <Navigation className="h-4 w-4 mr-2" />
           {isLoading ? "Getting location..." : "Use My Current Location"}
         </Button>
+      </div>
+
+      {/* Manual Entry Notice */}
+      <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950 p-2 rounded border">
+        💡 <strong>Tip:</strong> If GPS doesn't work, you can manually enter coordinates or search for a location above.
       </div>
 
       {/* Coordinate Inputs */}
