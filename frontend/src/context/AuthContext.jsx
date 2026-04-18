@@ -120,7 +120,7 @@ export function AuthProvider({ children }) {
                 }
                 return prev;
             });
-        }, 15000);
+        }, 5000);
 
         return () => {
             clearTimeout(safetyTier);
